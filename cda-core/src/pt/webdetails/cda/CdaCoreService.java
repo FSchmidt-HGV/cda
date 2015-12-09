@@ -184,6 +184,10 @@ public class CdaCoreService {
 
     // output type, extra settings
     setExportOptions( parameters, queryOptions );
+
+    // output column names
+    queryOptions.setOutputColumnName( parameters.getOutputColumnName() );
+
     return queryOptions;
   }
 

@@ -30,6 +30,20 @@ import pt.webdetails.cda.connections.xpath.XPathConnection;
 import pt.webdetails.cda.dataaccess.*;
 import pt.webdetails.cda.dataaccess.DataAccessEnums.ConnectionInstanceType;
 import pt.webdetails.cda.dataaccess.DataAccessEnums.DataAccessInstanceType;
+import pt.webdetails.cda.dataaccess.DenormalizedMdxDataAccess;
+import pt.webdetails.cda.dataaccess.DenormalizedOlap4JDataAccess;
+import pt.webdetails.cda.dataaccess.JoinCompoundDataAccess;
+import pt.webdetails.cda.dataaccess.JsonScriptableDataAccess;
+import pt.webdetails.cda.dataaccess.KettleDataAccess;
+import pt.webdetails.cda.dataaccess.MdxDataAccess;
+import pt.webdetails.cda.dataaccess.MqlDataAccess;
+import pt.webdetails.cda.dataaccess.Olap4JDataAccess;
+import pt.webdetails.cda.dataaccess.ReflectionDataAccess;
+import pt.webdetails.cda.dataaccess.ScriptableDataAccess;
+import pt.webdetails.cda.dataaccess.SqlDataAccess;
+import pt.webdetails.cda.dataaccess.UnionCompoundDataAccess;
+import pt.webdetails.cda.dataaccess.UnsupportedDataAccessException;
+import pt.webdetails.cda.dataaccess.XPathDataAccess;
 import pt.webdetails.cda.utils.TableModelUtils;
 import pt.webdetails.cda.utils.Util;
 import pt.webdetails.cda.xml.DomTraversalHelper;
@@ -162,6 +176,8 @@ public class CdaSettings {
           return new ReflectionDataAccess( element );
         case SCRIPTABLE:
           return new ScriptableDataAccess( element );
+        case JSON_SCRIPTABLE:
+          return new JsonScriptableDataAccess( element );
         case SQL:
           return new SqlDataAccess( element );
         case UNION:

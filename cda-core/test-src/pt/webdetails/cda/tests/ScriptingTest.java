@@ -1,5 +1,5 @@
 /*!
-* Copyright 2002 - 2013 Webdetails, a Pentaho company.  All rights reserved.
+* Copyright 2002 - 2015 Webdetails, a Pentaho company.  All rights reserved.
 * 
 * This software was developed by Webdetails and is provided under the terms
 * of the Mozilla Public License, Version 2.0, or any later version. You may not use
@@ -15,23 +15,21 @@ package pt.webdetails.cda.tests;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+<<<<<<< HEAD
+=======
+
+import org.junit.Test;
+>>>>>>> 5.4.0.7
 import pt.webdetails.cda.query.QueryOptions;
 import pt.webdetails.cda.settings.CdaSettings;
 
-/**
- * Created by IntelliJ IDEA.
- * User: pedro
- * Date: Feb 15, 2010
- * Time: 7:53:13 PM
- */
-public class ScriptingTest extends CdaTestCase
-{
+
+public class ScriptingTest extends CdaTestCase {
 
   private static final Log logger = LogFactory.getLog(ScriptingTest.class);
 
-  public void testSqlQuery() throws Exception
-  {
-
+  @Test
+  public void testSqlQuery() throws Exception {
 
     // Define an outputStream
     final CdaSettings cdaSettings = parseSettingsFile("sample-scripting.cda");
@@ -41,10 +39,22 @@ public class ScriptingTest extends CdaTestCase
     queryOptions.setOutputType("json");
     queryOptions.addParameter("status", "Shipped");
 
+    logger.info( "Doing query" );
+    doQuery( cdaSettings, queryOptions );
+  }
+
+  @Test
+  public void testJsonQuery() throws Exception {
+
+    // Define an outputStream
+    final CdaSettings cdaSettings = parseSettingsFile("sample-json-scripting.cda");
+
+    final QueryOptions queryOptions = new QueryOptions();
+    queryOptions.setDataAccessId("2");
+    queryOptions.setOutputType("json");
+
     logger.info("Doing query");
     doQuery(cdaSettings, queryOptions);
-
-
   }
 
 }

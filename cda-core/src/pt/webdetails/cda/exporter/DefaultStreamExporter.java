@@ -1,5 +1,5 @@
 /*!
-* Copyright 2002 - 2014 Webdetails, a Pentaho company.  All rights reserved.
+* Copyright 2002 - 2015 Webdetails, a Pentaho company.  All rights reserved.
 *
 * This software was developed by Webdetails and is provided under the terms
 * of the Mozilla Public License, Version 2.0, or any later version. You may not use
@@ -11,7 +11,6 @@
 * the license for the specific language governing your rights and limitations.
 */
 
-
 package pt.webdetails.cda.exporter;
 
 import org.apache.commons.logging.Log;
@@ -20,6 +19,7 @@ import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.util.StringUtil;
 import org.pentaho.di.core.variables.VariableSpace;
+import org.pentaho.di.core.variables.Variables;
 import org.pentaho.di.trans.TransMeta;
 import org.pentaho.di.trans.step.StepMeta;
 import org.pentaho.di.trans.steps.injector.InjectorMeta;
@@ -30,14 +30,32 @@ import pt.webdetails.cda.CdaEngine;
 import pt.webdetails.cda.dataaccess.kettle.DataAccessKettleAdapter;
 import pt.webdetails.cda.dataaccess.kettle.KettleAdapterException;
 import pt.webdetails.cda.utils.kettle.RowCountListener;
-import pt.webdetails.robochef.*;
+//<<<<<<< HEAD
+//import pt.webdetails.robochef.*;
+//=======
+import pt.webdetails.robochef.DynamicTransConfig;
+import pt.webdetails.robochef.DynamicTransMetaConfig;
+import pt.webdetails.robochef.DynamicTransformation;
+import pt.webdetails.robochef.RowProductionManager;
+import pt.webdetails.robochef.TableModelInput;
+//>>>>>>> 5.4.0.7
 
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.*;
+//<<<<<<< HEAD
+//import java.util.concurrent.*;
+//=======
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+
+//>>>>>>> 5.4.0.7
 
 /**
  * Direct exporter from data access to stream using Kettle
@@ -53,51 +71,92 @@ public class DefaultStreamExporter implements RowProductionManager, StreamExport
   private DataAccessKettleAdapter dataAccess;
   private AbstractKettleExporter exporter;
   private ExecutorService executorService = Executors.newCachedThreadPool();
-  private Collection<Callable<Boolean>> inputCallables = new ArrayList<Callable<Boolean>>();
 
   public DefaultStreamExporter( AbstractKettleExporter exporter,
-                               DataAccessKettleAdapter dataAccess ) {
+                                DataAccessKettleAdapter dataAccess ) {
     this.exporter = exporter;
     this.dataAccess = dataAccess;
   }
 
+  @Override
   public void export( OutputStream out ) throws ExporterException {
-    inputCallables.clear();
+    Collection<Callable<Boolean>> inputCallables = new ArrayList<Callable<Boolean>>();
 
     try {
+
+      boolean hasFilter = false;
+      boolean hasCalculatedColumns = dataAccess.hasCalculatedColumns();
+      StepMeta filterStepMeta = null;
+
       DynamicTransConfig transConfig = new DynamicTransConfig();
 
-      StepMeta dataAccessStepMeta = dataAccess
-              .getKettleStepMeta( "DataAccess" );
+      StepMeta dataAccessStepMeta = dataAccess.getKettleStepMeta( "DataAccess" );
 
       StepMeta injectorStepMeta = null;
+
+      StepMeta formulaStepMeta = null;
 
       String[] parameterNames = dataAccess.getParameterNames();
       DataRow parameters = dataAccess.getParameters();
       if ( parameterNames.length > 0 ) {
         injectorStepMeta = new StepMeta( "Input", new InjectorMeta() );
         injectorStepMeta.setCopies( 1 );
-        transConfig.addConfigEntry( DynamicTransConfig.EntryType.STEP,
-                injectorStepMeta.getName(),
-                injectorStepMeta.getXML() );
+        transConfig.addConfigEntry( DynamicTransConfig.EntryType.STEP, injectorStepMeta.getName(),
+            injectorStepMeta.getXML() );
         if ( dataAccessStepMeta.getStepMetaInterface() instanceof TableInputMeta ) {
           ( (TableInputMeta) dataAccessStepMeta.getStepMetaInterface() ).setLookupFromStep( injectorStepMeta );
         }
       }
 
       transConfig.addConfigEntry( DynamicTransConfig.EntryType.STEP,
-              dataAccessStepMeta.getName(), dataAccessStepMeta.getXML() );
+          dataAccessStepMeta.getName(), dataAccessStepMeta.getXML() );
+
+      if ( dataAccess.getDataAccessOutputs().size() > 0 ) {
+        hasFilter = true;
+        String[] s = getStepFields( dataAccess, dataAccessStepMeta, parameterNames );
+        filterStepMeta = dataAccess.getFilterStepMeta( "Filter", s /*, sqlDataAccess */ );
+        transConfig.addConfigEntry( DynamicTransConfig.EntryType.STEP,
+            filterStepMeta.getName(), filterStepMeta.getXML() );
+      }
 
       StepMeta exportStepMeta = exporter.getExportStepMeta( "Export" );
       transConfig.addConfigEntry( DynamicTransConfig.EntryType.STEP,
-              exportStepMeta.getName(), exportStepMeta.getXML() );
+          exportStepMeta.getName(), exportStepMeta.getXML() );
+
+      if ( hasCalculatedColumns ) {
+        formulaStepMeta = dataAccess.getFormulaStepMeta( "Formula" );
+        transConfig.addConfigEntry( DynamicTransConfig.EntryType.STEP, formulaStepMeta.getName(),
+            formulaStepMeta.getXML() );
+      }
 
       if ( parameterNames.length > 0 ) {
         transConfig.addConfigEntry( DynamicTransConfig.EntryType.HOP,
-                injectorStepMeta.getName(), dataAccessStepMeta.getName() );
+            injectorStepMeta.getName(), dataAccessStepMeta.getName() );
       }
-      transConfig.addConfigEntry( DynamicTransConfig.EntryType.HOP,
+
+      if ( hasFilter == true ) {
+        if ( hasCalculatedColumns ) {
+          transConfig.addConfigEntry( DynamicTransConfig.EntryType.HOP,
+              dataAccessStepMeta.getName(), formulaStepMeta.getName() );
+          transConfig.addConfigEntry( DynamicTransConfig.EntryType.HOP,
+              formulaStepMeta.getName(), filterStepMeta.getName() );
+        } else {
+          transConfig.addConfigEntry( DynamicTransConfig.EntryType.HOP,
+              dataAccessStepMeta.getName(), filterStepMeta.getName() );
+        }
+        transConfig.addConfigEntry( DynamicTransConfig.EntryType.HOP,
+            filterStepMeta.getName(), exportStepMeta.getName() );
+      } else {
+        if ( hasCalculatedColumns ) {
+          transConfig.addConfigEntry( DynamicTransConfig.EntryType.HOP,
+              dataAccessStepMeta.getName(), formulaStepMeta.getName() );
+          transConfig.addConfigEntry( DynamicTransConfig.EntryType.HOP,
+              formulaStepMeta.getName(), exportStepMeta.getName() );
+        } else {
+          transConfig.addConfigEntry( DynamicTransConfig.EntryType.HOP,
               dataAccessStepMeta.getName(), exportStepMeta.getName() );
+        }
+      }
 
       // Prepare parameters as data of the injector step:
       if ( parameterNames.length > 0 ) {
@@ -108,10 +167,17 @@ public class DefaultStreamExporter implements RowProductionManager, StreamExport
           Object value = parameters.get( parameterName );
           if ( value instanceof Object[] ) {
             Object[] array = (Object[]) value;
-            for ( int c = 0; c < array.length; ++c ) {
-              columnNames.add( parameterName + "_" + c );
-              columnClasses.add( array[c].getClass() );
-              values.add( array[c] );
+            int arrayLength = array.length;
+            if ( arrayLength > 0 ) {
+              for ( int c = 0; c < arrayLength; ++c ) {
+                columnNames.add( parameterName + "_" + c );
+                columnClasses.add( array[ c ].getClass() );
+                values.add( array[ c ] );
+              }
+            } else {
+              columnNames.add( parameterName );
+              columnClasses.add( Object.class );
+              values.add( null );
             }
           } else {
             columnNames.add( parameterName );
@@ -121,8 +187,8 @@ public class DefaultStreamExporter implements RowProductionManager, StreamExport
         }
 
         TypedTableModel model = new TypedTableModel(
-                columnNames.toArray( new String[columnNames.size()] ),
-                columnClasses.toArray( new Class[columnClasses.size()] ) );
+            columnNames.toArray( new String[ columnNames.size() ] ),
+            columnClasses.toArray( new Class[ columnClasses.size() ] ) );
         model.addRow( values.toArray() );
 
         TableModelInput input = new TableModelInput();
@@ -134,9 +200,12 @@ public class DefaultStreamExporter implements RowProductionManager, StreamExport
       transConfig.addOutput( exportStepMeta.getName(), countListener );
 
       ExtendedDynamicTransMetaConfig transMetaConfig = new ExtendedDynamicTransMetaConfig(
-              DynamicTransMetaConfig.Type.EMPTY, "Streaming Exporter",
-              null, null, dataAccess.getDatabases() );
-      DynamicTransformation trans = new DynamicTransformation( transConfig, transMetaConfig );
+          DynamicTransMetaConfig.Type.EMPTY, "Streaming Exporter",
+          null, null, dataAccess.getDatabases() );
+
+      //     DynamicTransformation
+      DynamicTransformation trans = new DynamicTransformation( transConfig, transMetaConfig, inputCallables );
+
       trans.executeCheckedSuccess( null, null, this );
       logger.info( trans.getReadWriteThroughput() );
 
@@ -155,16 +224,51 @@ public class DefaultStreamExporter implements RowProductionManager, StreamExport
     }
   }
 
-  public void startRowProduction() {
+  private String[] getStepFields( DataAccessKettleAdapter dataAccess, StepMeta dataAccessStepMeta,
+                                  String[] parameterNames ) throws KettleAdapterException, KettleException {
+    ExtendedDynamicTransMetaConfig transMetaConfig = new ExtendedDynamicTransMetaConfig(
+        DynamicTransMetaConfig.Type.EMPTY, "Streaming Exporter",
+        null, null, dataAccess.getDatabases() );
+    InjectorMeta injectorMeta = new InjectorMeta();
+    //In order to correctly fetch the fields, we need to make sure we insert the parameters on to this InjectorMeta
+    insertValuesIntoInjectorMeta( injectorMeta, parameterNames );
+
+    StepMeta injectorStepMeta = new StepMeta( "Input", injectorMeta );
+
+    TransMeta extTransMeta = transMetaConfig.getTransMeta( Variables.getADefaultVariableSpace() );
+    extTransMeta.addStep( injectorStepMeta );
+
+    return extTransMeta.
+      getStepFields( dataAccessStepMeta ).getFieldNames();
+  }
+
+  private void insertValuesIntoInjectorMeta( InjectorMeta injectorMeta, String[] parameterNames ) {
+    int size = parameterNames.length;
+    //[CDA-112] - Making sure we can handle more than ten columns means we need to specify arrays for
+    //type, length and precision, the content of the arrays won't actually matter at this point, we just need them to be
+    //filled, so enough space can be allocated to the paramData Object array
+    int[] tlp = new int[ size ];
+    for ( int i = 0; i < size; i++ ) {
+      tlp[ i ] = 0;
+    }
+    injectorMeta.setFieldname( parameterNames );
+    injectorMeta.setType( tlp );
+    injectorMeta.setLength( tlp );
+    injectorMeta.setPrecision( tlp );
+  }
+
+  @Override
+  public void startRowProduction( Collection<Callable<Boolean>> inputCallables ) {
     String timeoutStr = CdaEngine.getInstance().getConfigProperty( "pt.webdetails.cda.DefaultRowProductionTimeout" );
     long timeout = StringUtil.isEmpty( timeoutStr ) ? DEFAULT_ROW_PRODUCTION_TIMEOUT : Long.parseLong( timeoutStr );
     String unitStr =
-            CdaEngine.getInstance().getConfigProperty( "pt.webdetails.cda.DefaultRowProductionTimeoutTimeUnit" );
+        CdaEngine.getInstance().getConfigProperty( "pt.webdetails.cda.DefaultRowProductionTimeoutTimeUnit" );
     TimeUnit unit = StringUtil.isEmpty( unitStr ) ? DEFAULT_ROW_PRODUCTION_TIMEOUT_UNIT : TimeUnit.valueOf( unitStr );
-    startRowProduction( timeout, unit );
+    startRowProduction( timeout, unit, inputCallables );
   }
 
-  public void startRowProduction( long timeout, TimeUnit unit ) {
+  @Override
+  public void startRowProduction( long timeout, TimeUnit unit, Collection<Callable<Boolean>> inputCallables ) {
     try {
       List<Future<Boolean>> results = executorService.invokeAll( inputCallables, timeout, unit );
       for ( Future<Boolean> result : results ) {
@@ -177,10 +281,12 @@ public class DefaultStreamExporter implements RowProductionManager, StreamExport
     }
   }
 
+  @Override
   public String getMimeType() {
     return exporter.getMimeType();
   }
 
+  @Override
   public String getAttachmentName() {
     return exporter.getAttachmentName();
   }
@@ -190,12 +296,13 @@ public class DefaultStreamExporter implements RowProductionManager, StreamExport
     private DatabaseMeta[] databases;
 
     public ExtendedDynamicTransMetaConfig( Type type, String name,
-                                          String configDataSource, RepositoryConfig repoConfig,
-                                          DatabaseMeta[] databases ) throws KettleException {
+                                           String configDataSource, RepositoryConfig repoConfig,
+                                           DatabaseMeta[] databases ) throws KettleException {
       super( type, name, configDataSource, repoConfig );
       this.databases = databases;
     }
 
+    @Override
     protected TransMeta getTransMeta( VariableSpace variableSpace ) throws KettleException {
       TransMeta transMeta = super.getTransMeta( variableSpace );
       if ( databases != null ) {

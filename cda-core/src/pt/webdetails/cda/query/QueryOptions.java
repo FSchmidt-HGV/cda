@@ -1,5 +1,5 @@
 /*!
-* Copyright 2002 - 2013 Webdetails, a Pentaho company.  All rights reserved.
+* Copyright 2002 - 2015 Webdetails, a Pentaho company.  All rights reserved.
 * 
 * This software was developed by Webdetails and is provided under the terms
 * of the Mozilla Public License, Version 2.0, or any later version. You may not use
@@ -22,11 +22,19 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+//<<<<<<< HEAD
 /**
- * 
+ *
  */
-public class QueryOptions implements ExportOptions, IQueryArguments, Cloneable
-{
+//public class QueryOptions implements ExportOptions, IQueryArguments, Cloneable
+//{
+//=======
+import pt.webdetails.cda.dataaccess.Parameter;
+import pt.webdetails.cda.exporter.ExportOptions;
+import pt.webdetails.cda.exporter.ExporterEngine;
+//
+public class QueryOptions implements ExportOptions, IQueryArguments, Cloneable {
+//>>>>>>> 5.4.0.7
 
   private String dataAccessId;
   private int outputIndexId;
@@ -38,10 +46,10 @@ public class QueryOptions implements ExportOptions, IQueryArguments, Cloneable
   private Map<String, String> extraSettings;
   private String outputType;
   private boolean cacheBypass;
+  private List<String> outputColumnName;
 
 
-  public QueryOptions()
-  {
+  public QueryOptions() {
     outputIndexId = 1;
     paginate = false;
     pageSize = 20;
@@ -51,97 +59,82 @@ public class QueryOptions implements ExportOptions, IQueryArguments, Cloneable
     outputType = "json";
     extraSettings = new HashMap<String, String>();
     cacheBypass = false;
+    outputColumnName = new ArrayList<String>();
   }
 
 
-  public boolean isPaginate()
-  {
+  public boolean isPaginate() {
     return paginate;
   }
 
 
-  public void setPaginate(final boolean paginate)
-  {
+  public void setPaginate( final boolean paginate ) {
     this.paginate = paginate;
   }
 
-  public int getPageSize()
-  {
+  public int getPageSize() {
     return pageSize;
   }
 
 
-  public void setPageSize(final int pageSize)
-  {
+  public void setPageSize( final int pageSize ) {
     this.pageSize = pageSize;
   }
 
-  public int getPageStart()
-  {
+  public int getPageStart() {
     return pageStart;
   }
 
 
-  public void setPageStart(final int pageStart)
-  {
+  public void setPageStart( final int pageStart ) {
     this.pageStart = pageStart;
   }
 
 
-  public List<String> getSortBy()
-  {
+  public List<String> getSortBy() {
     return sortBy;
   }
 
 
-  public void setSortBy(final List<String> sortBy)
-  {
+  public void setSortBy( final List<String> sortBy ) {
     this.sortBy = sortBy;
   }
 
-  public List<Parameter> getParameters()
-  {
+  public List<Parameter> getParameters() {
     return parameters;
   }
 
 
-  public String getDataAccessId()
-  {
+  public String getDataAccessId() {
     return dataAccessId;
   }
 
 
-  public void setDataAccessId(final String dataAccessId)
-  {
+  public void setDataAccessId( final String dataAccessId ) {
     this.dataAccessId = dataAccessId;
   }
 
-  public int getOutputIndexId()
-  {
+  public int getOutputIndexId() {
     return outputIndexId;
   }
 
 
-  public void setOutputIndexId(final int outputIndexId)
-  {
+  public void setOutputIndexId( final int outputIndexId ) {
     this.outputIndexId = outputIndexId;
   }
 
-  public void addParameter(final String name, final Object value)
-  {
+  public void addParameter( final String name, final Object value ) {
 
-    final Parameter p = new Parameter(name, value);
-    parameters.add(p);
+    final Parameter p = new Parameter( name, value );
+    p.setDefaultValue( value );
+    parameters.add( p );
 
   }
 
-  public Parameter getParameter(final String name)
-  {
+  public Parameter getParameter( final String name ) {
 
-    for (final Parameter parameter : parameters)
-    {
-      if (parameter.getName().equals(name))
-      {
+    for ( final Parameter parameter : parameters ) {
+      if ( parameter.getName().equals( name ) ) {
         return parameter;
       }
     }
@@ -154,73 +147,67 @@ public class QueryOptions implements ExportOptions, IQueryArguments, Cloneable
   /**
    * Substitute existing parameter's value, or add if not there.
    */
-  public void setParameter(final String name, final String value)
-  {
-    for (Parameter param : parameters)
-    {
-      if (param.getName().equals(name))
-      {
-        param.setStringValue(value);
+  public void setParameter( final String name, final String value ) {
+    for ( Parameter param : parameters ) {
+      if ( param.getName().equals( name ) ) {
+        param.setStringValue( value );
         return;
       }
     }
     //not found
-    addParameter(name, value);
+    addParameter( name, value );
   }
 
 
-  public String getOutputType()
-  {
+  public String getOutputType() {
     return outputType;
   }
 
 
-  public void setOutputType(final String outputType)
-  {
+  public void setOutputType( final String outputType ) {
     this.outputType = outputType;
   }
 
 
-  public void setOutputType(final ExporterEngine.OutputType outputType)
-  {
+  public void setOutputType( final ExporterEngine.OutputType outputType ) {
     this.outputType = outputType.toString();
   }
 
 
-  public void addSetting(String setting, String value)
-  {
-    extraSettings.put(setting, value);
+  public void addSetting( String setting, String value ) {
+    extraSettings.put( setting, value );
   }
 
 
-  public String getSetting(String setting)
-  {
-    return extraSettings.get(setting);
+  public String getSetting( String setting ) {
+    return extraSettings.get( setting );
   }
 
 
-  public Map<String, String> getExtraSettings()
-  {
+  public Map<String, String> getExtraSettings() {
     return extraSettings;
   }
 
 
-  public boolean isCacheBypass()
-  {
+  public boolean isCacheBypass() {
     return cacheBypass;
   }
 
 
-  public void setCacheBypass(boolean cacheBypass)
-  {
+  public void setCacheBypass( boolean cacheBypass ) {
     this.cacheBypass = cacheBypass;
   }
 
+  public List<String> getOutputColumnName() {
+    return this.outputColumnName;
+  }
+
+  public void setOutputColumnName( List<String> outputColumnName ) {
+    this.outputColumnName = outputColumnName;
+  }
 
   @Override
   public Object clone() throws CloneNotSupportedException {
     return super.clone();
   }
-
-
 }

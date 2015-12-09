@@ -108,8 +108,9 @@ public class CdaUtils {
   @GET
   @Path( "/doQuery" )
   @Produces( { MimeTypes.JSON, MimeTypes.XML, MimeTypes.CSV, MimeTypes.XLS, MimeTypes.PLAIN_TEXT, MimeTypes.HTML } )
-  public StreamingOutput doQueryGet( @Context UriInfo urii, @Context HttpServletResponse servletResponse )
-    throws WebApplicationException {
+  public StreamingOutput doQueryGet( @Context UriInfo urii, @Context HttpServletRequest servletRequest,
+                                     @Context HttpServletResponse servletResponse ) throws WebApplicationException {
+    setCorsHeaders( servletRequest, servletResponse );
     return doQuery( urii.getQueryParameters(), servletResponse );
   }
 
@@ -126,7 +127,7 @@ public class CdaUtils {
       params = getParameterMapFromRequest( servletRequest );
     }
 
-
+    setCorsHeaders( servletRequest, servletResponse );
     return doQuery( params, servletResponse );
   }
 
@@ -150,25 +151,17 @@ public class CdaUtils {
 
     try {
 
-      try {
-        uuid = CpfAuditHelper.startAudit( getPluginName(), path, getObjectName(), this.getPentahoSession(),
-          iLogger, requestParams );
-      } catch ( Exception e ) {
-        logger.error( e );
-      }
+      uuid = CpfAuditHelper.startAudit( getPluginName(), path, getObjectName(), this.getPentahoSession(),
+        iLogger, requestParams );
 
       DoQueryParameters parameters = getDoQueryParameters( params );
 
       if ( parameters.isWrapItUp() ) {
         output = wrapQuery( parameters );
 
-        try {
-          end = System.currentTimeMillis();
-          CpfAuditHelper.endAudit( getPluginName(), path, getObjectName(),
-            this.getPentahoSession(), iLogger, start, uuid, end );
-        } catch ( Exception e ) {
-          logger.error( e );
-        }
+        end = System.currentTimeMillis();
+        CpfAuditHelper.endAudit( getPluginName(), path, getObjectName(),
+          this.getPentahoSession(), iLogger, start, uuid, end );
 
         return output;
       }
@@ -177,13 +170,9 @@ public class CdaUtils {
       eqr.writeHeaders( servletResponse );
       output = toStreamingOutput( eqr );
 
-      try {
-        end = System.currentTimeMillis();
-        CpfAuditHelper.endAudit( getPluginName(), path, getObjectName(),
-          this.getPentahoSession(), iLogger, start, uuid, end );
-      } catch ( Exception e ) {
-        logger.error( e );
-      }
+      end = System.currentTimeMillis();
+      CpfAuditHelper.endAudit( getPluginName(), path, getObjectName(),
+        this.getPentahoSession(), iLogger, start, uuid, end );
 
       return output;
     } catch ( Exception e ) {
@@ -262,6 +251,7 @@ public class CdaUtils {
     throws WebApplicationException {
     try {
       ExportedQueryResult eqr = getCdaCoreService().unwrapQuery( path, uuid );
+      setCorsHeaders( servletRequest, servletResponse );
       eqr.writeResponse( servletResponse );
 
     } catch ( Exception e ) {
@@ -449,20 +439,31 @@ public class CdaUtils {
   @Path( "/clearCache" )
   @Produces( "text/plain" )
   @Consumes( { APPLICATION_XML, APPLICATION_JSON } )
-  public void clearCache( @Context HttpServletResponse servletResponse,
+  public String clearCache( @Context HttpServletResponse servletResponse,
                           @Context HttpServletRequest servletRequest ) throws Exception {
+    String msg = "Cache Cleared Successfully";
+
     // Check if user is admin
     Boolean accessible = SecurityHelper.getInstance().isPentahoAdministrator( getPentahoSession() );
     if ( !accessible ) {
-      String msg = "Method clearCache not exposed or user does not have required permissions.";
+      msg = "Method clearCache not exposed or user does not have required permissions.";
+
       logger.error( msg );
       servletResponse.sendError( HttpServletResponse.SC_FORBIDDEN, msg );
+      return msg;
     }
 
-    CdaEngine.getInstance().getSettingsManager().clearCache();
-    AbstractDataAccess.clearCache();
+    try {
+      CdaEngine.getInstance().getSettingsManager().clearCache();
+      AbstractDataAccess.clearCache();
+    } catch ( Exception cce ) {
+      msg = "Method clearCache failed while trying to execute.";
 
-    servletResponse.getOutputStream().write( "Cache cleared".getBytes() );
+      logger.error( msg, cce );
+      servletResponse.sendError( HttpServletResponse.SC_INTERNAL_SERVER_ERROR, msg );
+    }
+
+    return msg;
   }
 
   @GET
@@ -620,6 +621,13 @@ public class CdaUtils {
     return params;
   }
 
+  private void setCorsHeaders( HttpServletRequest request, HttpServletResponse response ) {
+    String origin = request.getHeader( "ORIGIN" );
+    if ( origin != null ) {
+      response.setHeader( "Access-Control-Allow-Origin", origin );
+      response.setHeader( "Access-Control-Allow-Credentials", "true" );
+    }
+  }
 
   //Adding this because of compatibility with the reporting plugin on 5.0.1. The cda datasource on the reporting plugin
   //is expecting this signature
