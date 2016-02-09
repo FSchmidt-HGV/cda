@@ -132,6 +132,7 @@ public class CdaEngine {
 
     if(exporter instanceof CXlsExporter){
         ((CXlsExporter)exporter).templateSettings = dataAccess.getTemplateSettings();
+
     } else if(exporter instanceof PivotXlsExporter){
         ((PivotXlsExporter)exporter).templateSettings = dataAccess.getTemplateSettings();
     }

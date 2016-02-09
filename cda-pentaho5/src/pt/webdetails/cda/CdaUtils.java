@@ -61,12 +61,7 @@ import org.apache.commons.lang.StringUtils;
 import org.pentaho.platform.util.logging.SimpleLogger;
 import pt.webdetails.cda.dataaccess.AbstractDataAccess;
 import pt.webdetails.cda.dataaccess.DataAccessConnectionDescriptor;
-import pt.webdetails.cda.exporter.ExportOptions;
-import pt.webdetails.cda.exporter.ExportedQueryResult;
-import pt.webdetails.cda.exporter.Exporter;
-import pt.webdetails.cda.exporter.TableExporter;
-import pt.webdetails.cda.exporter.ExporterException;
-import pt.webdetails.cda.exporter.UnsupportedExporterException;
+import pt.webdetails.cda.exporter.*;
 import pt.webdetails.cda.services.CacheManager;
 import pt.webdetails.cda.services.Editor;
 import pt.webdetails.cda.services.ExtEditor;
@@ -110,10 +105,21 @@ public class CdaUtils {
   @Produces( { MimeTypes.JSON, MimeTypes.XML, MimeTypes.CSV, MimeTypes.XLS, MimeTypes.PLAIN_TEXT, MimeTypes.HTML } )
   public StreamingOutput doQueryGet( @Context UriInfo urii, @Context HttpServletRequest servletRequest,
                                      @Context HttpServletResponse servletResponse ) throws WebApplicationException {
-    setCorsHeaders( servletRequest, servletResponse );
-    return doQuery( urii.getQueryParameters(), servletResponse );
-  }
 
+    servletRequest.setAttribute("Accept","application/vnd.ms-excel");
+
+    setCorsHeaders( servletRequest, servletResponse );
+
+//      if(eqr.getExporter() instanceof CXlsExporter ||  eqr.getExporter() instanceof PivotXlsExporter){
+//          servletRequest.setContentType("application/vnd.ms-excel");
+//      }
+
+    StreamingOutput so = doQuery( urii.getQueryParameters(), servletResponse );
+    String t1 = servletResponse.getContentType();
+      String t2 = servletResponse.getLocale().toString();
+      MultivaluedMap<String,String> t3 = urii.getQueryParameters();
+    return so;
+  }
   @POST
   @Path( "/doQuery" )
   @Consumes( APPLICATION_FORM_URLENCODED )
@@ -135,7 +141,6 @@ public class CdaUtils {
     CdaCoreService core = getCdaCoreService();
     return core.doQuery( parameters );
   }
-
 
   public StreamingOutput doQuery( MultivaluedMap<String, String> params,
                                   HttpServletResponse servletResponse ) throws WebApplicationException {
@@ -167,6 +172,18 @@ public class CdaUtils {
       }
 
       ExportedQueryResult eqr = doQueryInternal( parameters );
+
+        boolean test = eqr.getExporter() instanceof CXlsExporter;
+
+        if(eqr.getExporter() instanceof CXlsExporter ||  eqr.getExporter() instanceof PivotXlsExporter){
+            servletResponse.setContentType("application/vnd.ms-excel");
+        }
+
+
+
+        System.out.println();
+        System.out.println();
+
       eqr.writeHeaders( servletResponse );
       output = toStreamingOutput( eqr );
 

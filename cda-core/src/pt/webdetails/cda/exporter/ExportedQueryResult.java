@@ -63,6 +63,10 @@ public abstract class ExportedQueryResult {
 
     response.setContentType( mimeType );
 
+    if( attachmentName != null  && attachmentName.contains(".xls")){
+        response.setContentType("application/vnd.ms-excel");
+    }
+
     if ( attachmentName != null ) {
       response.setHeader( "content-disposition", "attachment; filename=" + attachmentName );
     }
