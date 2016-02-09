@@ -16,20 +16,20 @@ package pt.webdetails.cda.tests;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-<<<<<<< HEAD
-import pt.webdetails.cda.query.QueryOptions;
-import pt.webdetails.cda.settings.CdaSettings;
-
+//<<<<<<< HEAD
+//import pt.webdetails.cda.query.QueryOptions;
+//import pt.webdetails.cda.settings.CdaSettings;
+//
 import javax.swing.table.TableModel;
 
-=======
+//=======
 
 import org.junit.Test;
 import pt.webdetails.cda.query.QueryOptions;
 import pt.webdetails.cda.settings.CdaSettings;
 
 public class OutputTest extends CdaTestCase {
->>>>>>> 5.4.0.7
+//>>>>>>> 5.4.0.7
 
   private static final Log logger = LogFactory.getLog( OutputTest.class );
 

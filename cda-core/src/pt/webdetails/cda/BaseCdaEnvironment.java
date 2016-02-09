@@ -29,6 +29,13 @@ import pt.webdetails.cda.dataaccess.DefaultDataAccessUtils;
 import pt.webdetails.cda.dataaccess.ICubeFileProviderSetter;
 import pt.webdetails.cda.dataaccess.IDataAccessUtils;
 import pt.webdetails.cpf.PluginEnvironment;
+//<<<<<<< HEAD
+//=======
+//import pt.webdetails.cpf.impl.SimpleSessionUtils;
+//import pt.webdetails.cpf.impl.SimpleUserSession;
+import pt.webdetails.cpf.bean.IBeanFactory;
+import pt.webdetails.cpf.bean.AbstractBeanFactory;
+//>>>>>>> 6.0.1.0
 import pt.webdetails.cpf.messaging.IEventPublisher;
 import pt.webdetails.cpf.messaging.PluginEvent;
 import pt.webdetails.cpf.repository.api.IContentAccessFactory;
@@ -58,7 +65,7 @@ public abstract class BaseCdaEnvironment implements ICdaEnvironment {
   private static final String BASE_PROPERTIES = "cda.properties";
 
 
-  private ICdaBeanFactory beanFactory;
+  private IBeanFactory beanFactory;
 
   private HierarchicalConfiguration config;
 
@@ -66,7 +73,7 @@ public abstract class BaseCdaEnvironment implements ICdaEnvironment {
 		init();
 	}
 	
-	public BaseCdaEnvironment(ICdaBeanFactory factory) throws InitializationException {
+	public BaseCdaEnvironment(IBeanFactory factory) throws InitializationException {
 		init(factory);
 	}
 
@@ -75,7 +82,7 @@ public abstract class BaseCdaEnvironment implements ICdaEnvironment {
 		initBeanFactory();
 	}
 	
-	public void init(ICdaBeanFactory factory) {
+	public void init(IBeanFactory factory) {
 		this.beanFactory = factory;
 	}
 
@@ -110,9 +117,10 @@ public abstract class BaseCdaEnvironment implements ICdaEnvironment {
 //			}
 //		}
 
-		beanFactory = new CoreBeanFactory();
-
-
+		beanFactory = new AbstractBeanFactory(){
+			@Override
+			public String getSpringXMLFilename(){ return "cda.spring.xml"; }
+		};
 	}
 
 	@Override

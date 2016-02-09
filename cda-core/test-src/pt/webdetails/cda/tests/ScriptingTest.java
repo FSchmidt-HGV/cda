@@ -15,11 +15,11 @@ package pt.webdetails.cda.tests;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-<<<<<<< HEAD
-=======
+//<<<<<<< HEAD
+//=======
 
 import org.junit.Test;
->>>>>>> 5.4.0.7
+//>>>>>>> 5.4.0.7
 import pt.webdetails.cda.query.QueryOptions;
 import pt.webdetails.cda.settings.CdaSettings;
 
